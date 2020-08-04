@@ -2,6 +2,8 @@ import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.awt.AWTException;
 import java.awt.Robot;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 class StartRStudio {
     public static void main(String args[])
@@ -11,16 +13,18 @@ class StartRStudio {
         *  file .R da aprire
         *  (to add more: they need to be formatted with two backslashes '\\' instead of one '\')
         */
-        String percorsoEst = new String("C:\\Users\\alice\\Desktop\\Tesi\\File\\R PROJECT\\R PROJECT\\R0-master\\R\\est.R0.TD.R");
-        //percorsoEst = new String(YOUR PATH HERE);
-        String percorsoItaly2020 = new String("C:\\Users\\alice\\Desktop\\Tesi\\File\\R PROJECT\\R PROJECT\\R0-master\\data\\Italy.2020.R");
-        //percorsoItaly2020 = new String(YOUR PATH HERE);
-        String pyPath = new String("C:\\Users\\alice\\Desktop\\Tesi\\Code\\makeFile.py");
-        //pyPath = new String(YOUR PATH HERE);
+        //gets parent directory absolute patch
+        Path workingDir = Paths.get("..");
+        String wk = new String(workingDir.toAbsolutePath().toString());
+
+        String pyPath = Paths.get(wk, "\\Code\\makeFile.py").toString();
+        String percorsoEst = Paths.get(wk, "\\R\\est.R0.TD.R").toString();
+        String percorsoItaly2020 = Paths.get(wk, "\\data\\Italy.2020.R").toString();
         
         /*
         *  command line to execute in cmd
         *  (one for each file)
+        *   the title is needed if the path contains empty spaces
         */
         String[] commandsEst = {"cmd", "/c", "start", "\"commandsEst\"", percorsoEst};
         String[] commandsItaly = {"cmd", "/c", "start", "\"commandsItaly\"", percorsoItaly2020};
@@ -30,26 +34,33 @@ class StartRStudio {
         *  command execution:
         *  first gets the daily data by the .py script, then opens RStudio
         */
-        Runtime.getRuntime().exec(commandsPyPath);
+        
 
+        ExecCommands(commandsPyPath);
         ExecCommands(commandsItaly);
         ExecCommands(commandsEst);
     }
 
     static void ExecCommands(String[] c){
+        Process p;
         try {
         //  runs cmd
-        Runtime.getRuntime().exec(c);
+        p = Runtime.getRuntime().exec(c);
+        System.out.println("exec");
+
+            try {
+                //  sleeps to let RStudio open
+                    p.waitFor();
+                    System.out.println("wait for");
+            } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } 
+
         } catch (IOException e){
             e.printStackTrace();
-        }
+            }
 
-        try {
-        //  sleeps to let RStudio open
-            Thread.sleep(6000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } 
+        
 
         /*
         *   presses the shortcut CTRL+SHIFT+S - Source 
