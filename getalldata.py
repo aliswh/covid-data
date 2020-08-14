@@ -11,20 +11,31 @@ url_province = 'https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-p
 
 # methods to make lists of the names of regions and provinces
 def getRegionNames():
+    dflist = []
     df = pandas.read_csv(url_regioni)
     df = df.drop_duplicates(subset=['denominazione_regione'])
-    return df['denominazione_regione'].tolist()
+    df = df['denominazione_regione'].tolist()
+    dflist = [x.replace(' ','') for x in dflist] # remove spaces
+    dflist = [x.replace("'",'') for x in dflist] # remove apostrophes
+    return dflist
 
 def getProvinceNames():
+    dflist = []
     df = pandas.read_csv(url_province)
     df = df.drop_duplicates(subset=['denominazione_provincia'])
-    return df['denominazione_provincia'].tolist()
+    dflist = df['denominazione_provincia'].tolist()
+    dflist = [x.replace(' ','') for x in dflist] # remove spaces
+    dflist = [x.replace("'",'') for x in dflist] # remove apostrophes
+    
+    return dflist
 
 # data
 data = ''                           # string which stores the number of cases per day - ascending chronological order
 allRegion = getRegionNames()        # list of regions names
 allProvince = getProvinceNames()    # list of provinces names
 allProvince = np.delete(allProvince, 4) # 4 is the index of 'In fase di definizione/aggiornamento'
+print('\r|O         |')
+
 #time data
 today = datetime.date.today()           # get current day
 currentTime = time.localtime().tm_hour  # get current hour
@@ -32,6 +43,7 @@ n = (today - datetime.date(2020, 2, 22)).days   # number of days from today to t
 startDate = ''                      # first day in the .cvs file 
 lastDate = ''                       # last day in the .cvs file
 np.date = []   # list of dates
+print('\r|OO        |')
 
 def getDate(count):
     date = today - datetime.timedelta(days=count)
@@ -46,6 +58,7 @@ else:
 for i in range(c, n-1): #c, n-1
     np.date.append(getDate(i))
 np.date = np.date[::-1]
+print('\r|OOO       |')
 
 def makeFile(data, zone):
     if zone in allProvince:
@@ -61,7 +74,7 @@ def makeFile(data, zone):
     f = open(filename, "w+")    #TODO check if 'w+' is the best choice
     f.write(data)
     f.close()
-    #print(data)
+    print(data)
 
 # 3 funzioni diverse in base alla zona
 def nazioneDaily():
@@ -84,6 +97,7 @@ def nazioneDaily():
     makeFile(data, 'Italy')
 
 r_df = pandas.read_csv(url_regioni, index_col='denominazione_regione')
+r_df.index = r_df.index.str.replace(' ','') # remove spaces
 def regioneDaily(region):
     #dataframe with index column at regional name TODO FARE COME PROVINCE
     df = r_df.loc[region, 'nuovi_positivi'] # r_df = regional dataframe
@@ -95,13 +109,15 @@ def regioneDaily(region):
     datar = datar[:-1]    # delete last ','
     
     makeFile(datar, region)
-
+print('\r|OOOO      |')
 
 # # #   P R O V I N C E   # # #
 # main province dataframe
 p_df_all = pandas.read_csv(url_province, index_col=['denominazione_provincia'], usecols=['denominazione_provincia'])
 p_df_all = p_df_all.drop('In fase di definizione/aggiornamento')  # clear data
-
+p_df_all = p_df_all.drop(p_df_all.loc[p_df_all.index=='Fuori Regione / Provincia Autonoma'].index)
+p_df_all.index = p_df_all.index.str.replace(' ','') # remove spaces
+p_df_all.index = p_df_all.index.str.replace("'",'') # remove spaces
 def get_p_df_all():
     for date in np.date:  
         global p_df_all
@@ -110,8 +126,11 @@ def get_p_df_all():
         df = df.rename(columns={'totale_casi': str(date)})  # rename 'totale_casi' column as the date of the same url
         df = df.drop('In fase di definizione/aggiornamento', axis='rows')   # clear data - keep only provinces names
         df = df.drop(df.loc[df.index=='Fuori Regione / Provincia Autonoma'].index)
+        df.index = df.index.str.replace(' ','') # remove spaces
+        df.index = df.index.str.replace("'",'') # remove apostrophes
         p_df_all = p_df_all.join(df, on='denominazione_provincia')    #add new column to the definitive dataframe
 get_p_df_all()
+print('\r|OOOOO     |')
 
 # provinces .csv files don't have a daily cases column, 
 # this function makes this subtraction to obtain it:
@@ -143,6 +162,7 @@ def provinciaDaily(prov):
         datap = datap + str(daily[i]) + ','
     datap = datap[:-1]
     makeFile(datap, prov)
+print('\r|OOOOOO    |')
 
 def changeDir():
     dataDir = os.path.dirname(os.path.realpath('__file__'))
@@ -154,13 +174,26 @@ def changeDir():
     os.chdir(path)
 changeDir()    #change working directory
 
+# new file with names of all .R files
+f = open('zones_list', 'w')
+f.write('Italy'+'\n')
+for name in allRegion:
+    f.write(name + '\n')
+for name in allProvince:
+    f.write(name + '\n')
+f.close()
+print('\r|OOOOOOO   |')
+
 nazioneDaily()  #funzione che salva il file aggiornato - nazionale
+print('\r|OOOOOOOO  |')
 
 for x in allRegion:     #funzione che salva il file aggiornato - regionale
     regioneDaily(x)
+print('\r|OOOOOOOOO |')
 
 for x in allProvince:   #funzione che salva il file aggiornato - provinciale
     provinciaDaily(x)
+print('| - DONE - |\n')
 
 # elapsed time check
 t1_stop = datetime.datetime.now()  
