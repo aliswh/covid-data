@@ -1,120 +1,163 @@
-import java.awt.BorderLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import javax.swing.JButton;
-import javax.swing.Box;
-import javax.swing.JFrame;
-import javax.swing.JTextArea;
-
+//actions
 import java.awt.event.KeyEvent;
-import java.io.IOException;
-import java.awt.AWTException;
 import java.awt.Robot;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
-import java.time.LocalTime;
+//scanner
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-
 import java.util.Scanner;
+import java.io.FileWriter;
+//data
 import java.util.List;
 import java.util.ArrayList;
 import java.io.File;
+//gui
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import java.awt.GridLayout;
+//exceptions
+import java.io.IOException;
+import java.awt.AWTException;
+
 
 public class Gui{
-
   public static void main(String[] args) {
 
+    // interface
+    JFrame f = new JFrame("Covid-19 Data");
+    f.setSize(300, 300);
+    f.setLocation(300,300);
+
+    final JButton button1 = new JButton("Get All Data");
+    button1.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        GetAllData();
+        }
+    });
+
+    final JButton button2 = new JButton("Open RStudio");
+    button2.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        OpenRStudio();
+      }
+    });
+
+    final JButton button3 = new JButton("Source Files");
+    button3.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        SourceFiles();
+      }
+    });
+
+    final JButton button4 = new JButton("Save Graphs");
+    button4.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        //TODO
+      }
+    });
+    
+    // add buttons to layout
+    f.setLayout(new GridLayout(4,1)); // 4 rows 1 column
+    f.add(button1);
+    f.add(button2);
+    f.add(button3);
+    f.add(button4);
+  
+    f.setVisible(true);
+  }
+
+  static void GetAllData(){
     Path workingDir = Paths.get("..");
     String wk = new String(workingDir.toAbsolutePath().toString());
 
     String pyPath = Paths.get(wk, "\\Code\\getalldata.py").toString();
-    String[] commandsPyPath = {"cmd", "/c", "start", "\"get all data\"", pyPath};
-    
 
-    // interface
-    JFrame f = new JFrame("Covid-19 Data");
-    f.setSize(250, 250);
-    f.setLocation(300,200);
-    final JTextArea textArea = new JTextArea(10, 40);
-    f.getContentPane().add(BorderLayout.CENTER, textArea);
+    runCommand("\"get all data\"", pyPath);
 
-    final JButton button1 = new JButton("Get All Data");
-    f.getContentPane().add(button1);
-    button1.addActionListener(new ActionListener() {
-
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            try {
-                //  runs cmd
-                Runtime.getRuntime().exec(commandsPyPath);
-                System.out.println("exec");
+    /* 
+      wait for the .py script to end, so I can open 
+      RStudio only when all files are made
+              I scan the tasklist, looking for "py.exe" the process that handles my script
+              While this process exists, keep scanning 
+              only when "py.exe" doesn't exists break the while true loop
+    */
+    try {
+      String line;            // input line to read processes
+      String linecheck = "";  // string to append all processes names
+      int count = 0;          // times the py.exe process is counted
+                              // if it is 0, it means it wasn't open before so it should continue to scan
+      while (true) {
+        // get all processes names in tasklist.exe
+        Process p = Runtime.getRuntime().exec(System.getenv("windir") +"\\system32\\"+"tasklist.exe");
+        BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
         
-                } catch (IOException er){
-                    er.printStackTrace();
-                    }
-            textArea.append("\nData downloaded\n");
-            LocalTime t = LocalTime.now();
-            textArea.append(t.toString());
+        // add all tasklist.exe lines to a String to get all processes names
+        while ((line = input.readLine()) != null) {
+          linecheck = linecheck.concat(line);
+          System.out.print("download data .  .  .  \r");
+        }
+        // scan the string
+        if (linecheck.contains("py.exe") || count == 0) {
+          count++;  
+        } else { break; } // break the loop when "py.exe" doesn't exist
+        linecheck = "";   // clear 
+        }
+      } catch (Exception err) {
+          err.printStackTrace();}
+  }
 
-          /* 
-            wait for the .py script to end, so I can open 
-            RStudio only when all files are made
-                    I scan the tasklist, looking for "py.exe" the process that handles my script
-                    While this process exists, keep scanning 
-                    only when "py.exe" doesn't exists break the while true loop
-           */
-            try {
-              String line;            // input line to read processes
-              String linecheck = "";  // string to append all processes names
-              int count = 0;
-              while (true) {
-                // get all processes names in tasklist.exe
-                Process p = Runtime.getRuntime().exec(System.getenv("windir") +"\\system32\\"+"tasklist.exe");
-                BufferedReader input =
-                      new BufferedReader(new InputStreamReader(p.getInputStream()));
-                
-                // add all tasklist.exe lines to a String
-                while ((line = input.readLine()) != null) {
-                  linecheck = linecheck.concat(line);
-                  //System.out.println(linecheck);
-                  System.out.print("downloading data .  .  .  \r");
-                  Thread.sleep(50);
-                  System.out.print("downloading data   .  .  .\r");
-                } // loop to get all processes names
+  static void SourceFiles(){
+    File temp_file = new File("temp.est.R0.TD.R");//change to .R
+    String temp_file_path = "C:\\Users\\alice\\Desktop\\Tesi\\File\\R PROJECT\\R PROJECT\\R0-master\\Code\\temp.est.R0.TD.R"; //TODO relative path
 
-                // scan the string
-                if (linecheck.contains("py.exe") || count == 0) {
-                  count++;  // times the py.exe process is counted
-                } else { break; } // break the loop when "py.exe" doesn't exist
+    Path workingDir = Paths.get("..");
+    String wk = new String(workingDir.toAbsolutePath().toString());
 
-                linecheck = ""; // clear 
-                }
-              } catch (Exception err) {
-                  err.printStackTrace();
-                }
-            }
-    });
+    String[] arr = new String[0];
+    String filename =  Paths.get(wk, "\\Data\\" + "zones_list").toString();
+    String function_path =  Paths.get(wk, "\\R\\" + "est.R0.TD.R").toString();
+    
+    try {
+      Scanner s = new Scanner(new File(filename));
+      List<String> lines = new ArrayList<String>(); 
 
-    final JButton button2 = new JButton("Open RStudio");
-    f.getContentPane().add(button2);
-    button2.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        String[] commands = {"cmd", "/c", "start", "\" Opening RStudio \"","C:\\Program Files\\RStudio\\bin\\rstudio.exe"};
-        try {
-        Runtime.getRuntime().exec(commands);
-        } catch (IOException er){
-          er.printStackTrace();
-          }
-          try {
-            //  sleeps to let RStudio open
-                Thread.sleep(5000);
-        } catch (InterruptedException er) {
-                er.printStackTrace();
-            }
-          try {
+      while (s.hasNextLine()) { 
+        lines.add(s.nextLine()); 
+      }
+      // add zone names to array 'arr' as Strings
+      arr = lines.toArray(new String[0]);    
+
+    runCommand("source on est.R0.TD.R", function_path);
+    sleep(1000);
+    source();
+
+    String filepath_est_R0 = Paths.get(wk, "\\tests\\" + "est.R0.TD.R").toString();  //quello del prof va cambiato!!
+    for(int i=0; i<arr.length; i++) { 
+      String path = Paths.get(wk, "\\Data\\" + arr[i] + ".2020.R").toString();
+      runCommand("\"Loading\"", path);
+      uncomment(filepath_est_R0, arr[i], temp_file);   // create file with data about the right zone to source 'est.R0.TD.R' on
+      runCommand("\"Create graph\"", temp_file_path);
+      sleep(2000); //gestito anche tramite uncomment?
+      source();
+    }
+  } catch (IOException e) {
+    e.printStackTrace();}
+  }
+
+  static void OpenRStudio(){
+    // path to RStudio
+    String path = "C:\\Program Files\\RStudio\\bin\\rstudio.exe"; //TODO relative path
+        runCommand("\"Opening RStudio\"", path);
+        sleep(5000);
+
+        try { // closes all currently open files in RStudio
             Robot robot = new Robot();
     
             robot.keyPress(KeyEvent.VK_CONTROL);
@@ -126,83 +169,126 @@ public class Gui{
             robot.keyRelease(KeyEvent.VK_CONTROL);
         
         } catch (AWTException er) {
-                er.printStackTrace();
-        }
-      }
-    });
-
-    final JButton button3 = new JButton("Source Files");
-    f.getContentPane().add(button3);
-    button3.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        ExecCommands();
-      }
-    });
-    
-    
-    Box box = Box.createVerticalBox();
-    box.add(button1);
-    box.add(button2);
-    box.add(button3);
-    f.add(box);  
+                er.printStackTrace();}
+  }
   
-    f.setVisible(true);
+  static void source(){ 
+    try {
+      Robot robot = new Robot();
+
+      robot.keyPress(KeyEvent.VK_CONTROL);
+      robot.keyPress(KeyEvent.VK_SHIFT);
+      robot.keyPress(KeyEvent.VK_S);
+
+      robot.keyRelease(KeyEvent.VK_S);
+      robot.keyRelease(KeyEvent.VK_SHIFT);
+      robot.keyRelease(KeyEvent.VK_CONTROL);
+  
+    } catch (AWTException e) {
+            e.printStackTrace();}
   }
 
-  static void ExecCommands(){
-    Path workingDir = Paths.get("..");
-    String wk = new String(workingDir.toAbsolutePath().toString());
-
-    String[] arr = new String[0]; 
-    String filename = "C:\\Users\\alice\\Desktop\\Tesi\\File\\R PROJECT\\R PROJECT\\R0-master\\data\\zones_list";
-    
+  static void sleep(int t){ 
     try {
-      Scanner s = new Scanner(new File(filename));
-      List<String> lines = new ArrayList<String>(); 
-      while (s.hasNextLine()) { 
-        lines.add(s.nextLine()); 
-      }
-      arr = lines.toArray(new String[0]); 
-      } catch (IOException e) {
-        e.printStackTrace();}
+      // sleeps to let the file source
+        Thread.sleep(t);
+      } catch (InterruptedException e) {
+        e.printStackTrace();} 
+  }
 
-    for(int i=0; i<arr.length; i++) {
-      String path = Paths.get(wk, "\\Data\\" + arr[i] + ".2020.R").toString();
-      String[] commands = {"cmd", "/c", "start", "\" loading \"", path};
-        
-      try {
+  static void runCommand(String title, String path){ 
+    String[] commands = {"cmd", "/c", "start", title, path};
+    // title == title given to the window (irrelevant to code purposes)
+    try {
       //  runs cmd
       Runtime.getRuntime().exec(commands);
-      System.out.println(arr[i]);
+    } catch (IOException er){
+        er.printStackTrace();}
+  }
 
-        try {
-        // sleeps to let the file source
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {
-          e.printStackTrace();} 
+  static void uncomment(String filepath_est_R0, String zone, File file) throws IOException {
+    FileWriter fr = null;
+    Path workingDir = Paths.get("..");
+    String wk = new String(workingDir.toAbsolutePath().toString());
+    String wd = Paths.get(wk, "\\Data\\plots").toString();
+    try {
+      fr = new FileWriter(file, false); // if false, overwrites file, if true appends
+      int count = 0;
+      boolean flag = false;
+      Scanner s = new Scanner(new File(filepath_est_R0));
+      String data = // beginning of file
+        "setwd(" + wd + ")"  // set working directory where to save graphs
+      + "#Loading package\n"
+      + "library(R0)\n"
+      + "## Data is taken from the Department of Italian Civil Protection for key transmission parameters of an institutional\n"
+      + "## outbreak during the 2020 SARS-Cov2 pandemic in Italy\n"
+      + "\n";
 
-      } catch (IOException e){
-          e.printStackTrace();
+      while (s.hasNextLine()) {        
+        String nextLine = s.nextLine();
+        if (nextLine.length() == 0) 
+          continue; // skip blank lines
+
+        if(nextLine.contains(zone.toUpperCase())){
+          flag = true;
+          while(count<3){
+            nextLine = s.nextLine();
+            nextLine = nextLine.replaceFirst("#", "");  // uncomment '#'
+            data += (nextLine + "\n");
+            count += 1;
           }
-
-      /*
-      *   presses the shortcut CTRL+SHIFT+S - Source 
-      */
-      try {
-          Robot robot = new Robot();
-
-          robot.keyPress(KeyEvent.VK_CONTROL);
-          robot.keyPress(KeyEvent.VK_SHIFT);
-          robot.keyPress(KeyEvent.VK_S);
-
-          robot.keyRelease(KeyEvent.VK_S);
-          robot.keyRelease(KeyEvent.VK_SHIFT);
-          robot.keyRelease(KeyEvent.VK_CONTROL);
+          count = 0;
+        }
+      } 
+      // if the zone isn't found by the scanner, add a standard simulation for it
+      if(!flag){
+        String standardSim =
+          "# STANDARD SIMULATION\n"
+        +  "data(" + zone + ".2020)\n"
+        + "mGT<-generation.time(\"gamma\", c(3, 1.5))\n"
+        + "TD <- est.R0.TD(" + zone + ".2020, mGT, begin=1, end=93, nsim=1450)"
+        + "\n";
+        data += standardSim;
+      }
       
-      } catch (AWTException e) {
-              e.printStackTrace();
-    }}
-}
+      data += // end of file
+          "\n"
+        + "# Warning messages:\n"
+        + "# 1: In est.R0.TD(Italy.2020, mGT) : Simulations may take several minutes.\n"
+        + "# 2: In est.R0.TD(Italy.2020, mGT) : Using initial incidence as initial number of cases.\n"
+        + "TD\n"
+        + "# Reproduction number estimate using  Time-Dependent  method.\n"
+        + "# 2.322239 2.272013 1.998474 1.843703 2.019297 1.867488 1.644993 1.553265 1.553317 1.601317 ...\n"
+        + "## An interesting way to look at these results is to agregate initial data by longest time unit,\n"
+        + "## such as weekly incidence. This gives a global overview of the epidemic.\n"
+        + "TD.weekly <- smooth.Rt(TD, 4)\n"
+        + "print(TD.weekly[[\"conf.int\"]])\n"
+        + "print(TD.weekly[[\"R\"]])\n"
+        + "# Reproduction number estimate using  Time-Dependant  method.\n"
+        + "# 1.878424 1.580976 1.356918 1.131633 0.9615463 0.8118902 0.8045254 0.8395747 0.8542518 0.8258094..\n"
+        + "png(" + zone + ".png)"   // exports graph as .png s
+        + "plot(TD.weekly)"
+        + "dev.off()"; 
+        
+      System.out.println(data);
+      fr.write(data);
+         
+      } catch (IOException e) {
+        e.printStackTrace();
+    } finally {
+      try {
+        fr.close();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
 
+    /* handle thread notify
+    try {
+      Thread.sleep(1000);
+    } catch (Exception e) {
+      //TODO: handle exception
+    } */
+    
+  }
 }

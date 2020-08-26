@@ -9,30 +9,21 @@ url_storico_nazionale = 'https://raw.githubusercontent.com/pcm-dpc/COVID-19/mast
 url_regioni = 'https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv'
 url_province = 'https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-province/dpc-covid19-ita-province-' + '20200224' + '.csv'
 
-# methods to make lists of the names of regions and provinces
-def getRegionNames():
+# method to make lists of the names of regions and provinces
+def getNames(url, denominazione):
     dflist = []
-    df = pandas.read_csv(url_regioni)
-    df = df.drop_duplicates(subset=['denominazione_regione'])
-    df = df['denominazione_regione'].tolist()
+    df = pandas.read_csv(url)
+    df = df.drop_duplicates(subset=[denominazione])
+    dflist = df[denominazione].tolist()
     dflist = [x.replace(' ','') for x in dflist] # remove spaces
     dflist = [x.replace("'",'') for x in dflist] # remove apostrophes
-    return dflist
-
-def getProvinceNames():
-    dflist = []
-    df = pandas.read_csv(url_province)
-    df = df.drop_duplicates(subset=['denominazione_provincia'])
-    dflist = df['denominazione_provincia'].tolist()
-    dflist = [x.replace(' ','') for x in dflist] # remove spaces
-    dflist = [x.replace("'",'') for x in dflist] # remove apostrophes
-    
+    dflist = [x.replace("-",'') for x in dflist] # remove dashes
     return dflist
 
 # data
 data = ''                           # string which stores the number of cases per day - ascending chronological order
-allRegion = getRegionNames()        # list of regions names
-allProvince = getProvinceNames()    # list of provinces names
+allRegion = getNames(url_regioni,'denominazione_regione')        
+allProvince = getNames(url_province,'denominazione_provincia')
 allProvince = np.delete(allProvince, 4) # 4 is the index of 'In fase di definizione/aggiornamento'
 print('\r|O         |')
 
@@ -74,7 +65,7 @@ def makeFile(data, zone):
     f = open(filename, "w+")    #TODO check if 'w+' is the best choice
     f.write(data)
     f.close()
-    print(data)
+    #print(data)
 
 # 3 funzioni diverse in base alla zona
 def nazioneDaily():
@@ -98,6 +89,8 @@ def nazioneDaily():
 
 r_df = pandas.read_csv(url_regioni, index_col='denominazione_regione')
 r_df.index = r_df.index.str.replace(' ','') # remove spaces
+r_df.index = r_df.index.str.replace("'",'') # remove apostrophes
+r_df.index = r_df.index.str.replace("-",'') # remove dashes
 def regioneDaily(region):
     #dataframe with index column at regional name TODO FARE COME PROVINCE
     df = r_df.loc[region, 'nuovi_positivi'] # r_df = regional dataframe
@@ -117,7 +110,8 @@ p_df_all = pandas.read_csv(url_province, index_col=['denominazione_provincia'], 
 p_df_all = p_df_all.drop('In fase di definizione/aggiornamento')  # clear data
 p_df_all = p_df_all.drop(p_df_all.loc[p_df_all.index=='Fuori Regione / Provincia Autonoma'].index)
 p_df_all.index = p_df_all.index.str.replace(' ','') # remove spaces
-p_df_all.index = p_df_all.index.str.replace("'",'') # remove spaces
+p_df_all.index = p_df_all.index.str.replace("'",'') # remove apostrophes
+p_df_all.index = p_df_all.index.str.replace("-",'') # remove dashes
 def get_p_df_all():
     for date in np.date:  
         global p_df_all
@@ -128,6 +122,7 @@ def get_p_df_all():
         df = df.drop(df.loc[df.index=='Fuori Regione / Provincia Autonoma'].index)
         df.index = df.index.str.replace(' ','') # remove spaces
         df.index = df.index.str.replace("'",'') # remove apostrophes
+        df.index = df.index.str.replace("-",'') # remove dashes
         p_df_all = p_df_all.join(df, on='denominazione_provincia')    #add new column to the definitive dataframe
 get_p_df_all()
 print('\r|OOOOO     |')
@@ -157,7 +152,7 @@ def provinciaDaily(prov):
 
     daily = totalToDaily(x, prov)
 
-    datap = ''
+    datap = '0,' #TODO IMPORTANTE! le province hanno un dato in meno di regione e nazione
     for i in range(0, len(np.date)-1):
         datap = datap + str(daily[i]) + ','
     datap = datap[:-1]
