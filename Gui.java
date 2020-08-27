@@ -297,9 +297,9 @@ public class Gui{
         + "print(TD.weekly[[\"R\"]])\n"
         + "# Reproduction number estimate using  Time-Dependant  method.\n"
         + "# 1.878424 1.580976 1.356918 1.131633 0.9615463 0.8118902 0.8045254 0.8395747 0.8542518 0.8258094..\n"
-        + "png(" + zone + ".png)"   // exports graph as .png s
-        + "plot(TD.weekly)"
-        + "dev.off()"; 
+        + "png(filename=\'plots/" + zone + ".png\', width = 600, height = 400)\n"   // exports graph as .png s
+        + "plot(TD.weekly)\n"
+        + "dev.off()\n"; 
         
       System.out.println(data);
       fr.write(data);
