@@ -12,30 +12,47 @@ import java.io.FileWriter;
 import java.util.List;
 import java.util.ArrayList;
 import java.io.File;
+import java.nio.file.Files;
 //gui
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.UIManager;
 import java.awt.GridLayout;
 //exceptions
 import java.io.IOException;
 import java.awt.AWTException;
-
+import javax.swing.UnsupportedLookAndFeelException;
+//other
+import javax.swing.filechooser.FileSystemView;
 
 public class Gui{
   public static void main(String[] args) {
 
     // interface
-    JFrame f = new JFrame("Covid-19 Data");
+    try {
+      UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); // Set system L&F
+    } 
+    catch (UnsupportedLookAndFeelException e) {e.printStackTrace();}
+    catch (ClassNotFoundException e) {e.printStackTrace();}
+    catch (InstantiationException e) {e.printStackTrace();}
+    catch (IllegalAccessException e) {e.printStackTrace();}
+
+    JFrame f = new JFrame("R0(t) for Covid-19");
     f.setSize(300, 300);
     f.setLocation(300,300);
 
-    final JButton button1 = new JButton("Get All Data");
+    final JButton button1 = new JButton("Download data");
     button1.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
+        try{
         GetAllData();
+        } catch(IOException err) {err.printStackTrace();}
+        // notify when download is completed
+        JOptionPane.showMessageDialog(f, "Data downloaded");
         }
     });
 
@@ -47,7 +64,7 @@ public class Gui{
       }
     });
 
-    final JButton button3 = new JButton("Source Files");
+    final JButton button3 = new JButton("Source files");
     button3.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
@@ -73,12 +90,18 @@ public class Gui{
     f.setVisible(true);
   }
 
-  static void GetAllData(){
+  static void GetAllData() throws IOException {
     Path workingDir = Paths.get("..");
     String wk = new String(workingDir.toAbsolutePath().toString());
 
-    String pyPath = Paths.get(wk, "\\Code\\getalldata.py").toString();
+    // create 'plots' folder in Documents folder
+    String docpath = FileSystemView.getFileSystemView().getDefaultDirectory().getPath();
+    Path plotspath = Paths.get(docpath, "plots");
+    if (Files.notExists(plotspath)) {
+      Files.createDirectory(plotspath);  
+    }
 
+    String pyPath = Paths.get(wk, "\\Code\\getalldata.py").toString();
     runCommand("\"get all data\"", pyPath);
 
     /* 
@@ -106,16 +129,18 @@ public class Gui{
         // scan the string
         if (linecheck.contains("py.exe") || count == 0) {
           count++;  
-        } else { break; } // break the loop when "py.exe" doesn't exist
+        } else { 
+          break; 
+        } // break the loop when "py.exe" doesn't exist
         linecheck = "";   // clear 
         }
-      } catch (Exception err) {
-          err.printStackTrace();}
+    } catch (Exception err) {
+      err.printStackTrace();
+    }
   }
 
   static void SourceFiles(){
     File temp_file = new File("temp.est.R0.TD.R");//change to .R
-    String temp_file_path = "C:\\Users\\alice\\Desktop\\Tesi\\File\\R PROJECT\\R PROJECT\\R0-master\\Code\\temp.est.R0.TD.R"; //TODO relative path
 
     Path workingDir = Paths.get("..");
     String wk = new String(workingDir.toAbsolutePath().toString());
@@ -123,6 +148,7 @@ public class Gui{
     String[] arr = new String[0];
     String filename =  Paths.get(wk, "\\Data\\" + "zones_list").toString();
     String function_path =  Paths.get(wk, "\\R\\" + "est.R0.TD.R").toString();
+    String temp_file_path = Paths.get(wk, "\\Code\\" + "temp.est.R0.TD.R").toString();
     
     try {
       Scanner s = new Scanner(new File(filename));
@@ -134,42 +160,44 @@ public class Gui{
       // add zone names to array 'arr' as Strings
       arr = lines.toArray(new String[0]);    
 
-    runCommand("source on est.R0.TD.R", function_path);
-    sleep(1000);
-    source();
-
-    String filepath_est_R0 = Paths.get(wk, "\\tests\\" + "est.R0.TD.R").toString();  //quello del prof va cambiato!!
-    for(int i=0; i<arr.length; i++) { 
-      String path = Paths.get(wk, "\\Data\\" + arr[i] + ".2020.R").toString();
-      runCommand("\"Loading\"", path);
-      uncomment(filepath_est_R0, arr[i], temp_file);   // create file with data about the right zone to source 'est.R0.TD.R' on
-      runCommand("\"Create graph\"", temp_file_path);
-      sleep(2000); //gestito anche tramite uncomment?
+      runCommand("source on est.R0.TD.R", function_path);
+      sleep(1000);
       source();
+
+      String filepath_est_R0 = Paths.get(wk, "\\tests\\" + "est.R0.TD.R").toString();  //quello del prof va cambiato!!
+      for(int i=0; i<arr.length; i++) { 
+        String path = Paths.get(wk, "\\Data\\" + arr[i] + ".2020.R").toString();
+        runCommand("\"Loading\"", path);
+        uncomment(filepath_est_R0, arr[i], temp_file);   // create file with data about the right zone to source 'est.R0.TD.R' on
+        // handle thread
+        runCommand("\"Plot\"", temp_file_path);
+        sleep(2000); //gestito anche tramite uncomment?
+        source();
+      }
+    } catch (IOException e) {
+      e.printStackTrace();}
     }
-  } catch (IOException e) {
-    e.printStackTrace();}
-  }
 
   static void OpenRStudio(){
     // path to RStudio
-    String path = "C:\\Program Files\\RStudio\\bin\\rstudio.exe"; //TODO relative path
-        runCommand("\"Opening RStudio\"", path);
-        sleep(5000);
+    String path = "C:\\Program Files\\RStudio\\bin\\rstudio.exe";
+    runCommand("\"Opening RStudio\"", path);
+    sleep(5000);
 
-        try { // closes all currently open files in RStudio
-            Robot robot = new Robot();
+    try { // closes all currently open files in RStudio
+      Robot robot = new Robot();
     
-            robot.keyPress(KeyEvent.VK_CONTROL);
-            robot.keyPress(KeyEvent.VK_SHIFT);
-            robot.keyPress(KeyEvent.VK_W);
+      robot.keyPress(KeyEvent.VK_CONTROL);
+      robot.keyPress(KeyEvent.VK_SHIFT);
+      robot.keyPress(KeyEvent.VK_W);
     
-            robot.keyRelease(KeyEvent.VK_W);
-            robot.keyRelease(KeyEvent.VK_SHIFT);
-            robot.keyRelease(KeyEvent.VK_CONTROL);
+      robot.keyRelease(KeyEvent.VK_W);
+      robot.keyRelease(KeyEvent.VK_SHIFT);
+      robot.keyRelease(KeyEvent.VK_CONTROL);
         
-        } catch (AWTException er) {
-                er.printStackTrace();}
+    } catch (AWTException er) {
+      er.printStackTrace();
+    }
   }
   
   static void source(){ 
@@ -185,15 +213,17 @@ public class Gui{
       robot.keyRelease(KeyEvent.VK_CONTROL);
   
     } catch (AWTException e) {
-            e.printStackTrace();}
+      e.printStackTrace();
+    }
   }
 
   static void sleep(int t){ 
     try {
-      // sleeps to let the file source
-        Thread.sleep(t);
-      } catch (InterruptedException e) {
-        e.printStackTrace();} 
+    // sleeps to let the file source
+    Thread.sleep(t);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    } 
   }
 
   static void runCommand(String title, String path){ 
@@ -203,7 +233,8 @@ public class Gui{
       //  runs cmd
       Runtime.getRuntime().exec(commands);
     } catch (IOException er){
-        er.printStackTrace();}
+      er.printStackTrace();
+    }
   }
 
   static void uncomment(String filepath_est_R0, String zone, File file) throws IOException {
@@ -275,12 +306,12 @@ public class Gui{
          
       } catch (IOException e) {
         e.printStackTrace();
-    } finally {
-      try {
-        fr.close();
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+      } finally {
+        try {
+          fr.close();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
     }
 
     /* handle thread notify
