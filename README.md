@@ -7,3 +7,6 @@ getalldata.py - makesFile.py :
 StartRStudio.java :
   run this to get an updated Italy.2020.R file and source it in RStudio, and then source est.R0.TD.R.
   TODO: do this for all files (regions and provinces)
+  
+  # Project status
+  Abandoned. Please look at [R0-covid19-thesis](https://github.com/aliswh/R0-covid19-thesis)
